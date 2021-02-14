@@ -2,6 +2,7 @@
 # coding=utf-8
 import os.path
 import sys
+import Assembler
 
 # --------------------------------
 #   Marco Ravelo
@@ -37,5 +38,7 @@ if __name__ == '__main__':
     # open file and read all lines (removing any '\n' chars)
     with open (input_file, 'r') as open_file:
         lines = open_file.readlines()
-
+    
+        assembler = Assembler.MyAssember()
+        assembler.start(lines)
     

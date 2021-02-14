@@ -5,7 +5,7 @@
 #   Marco Ravelo
 #   CSCE 434 - Compiler Design
 #   Assignment #2 - 2/10/2021 
-#   file: assembler.py
+#   file: Assembler.py
 # --------------------------------
 
 # Resources used:
@@ -65,7 +65,7 @@ class AssemberError(Exception):
 #   ASSEMBLER
 # --------------------------------
 
-class Assember:
+class MyAssember:
     # --------------------------------
     #   INITIALIZER
     # --------------------------------
@@ -78,12 +78,12 @@ class Assember:
             if (opt == '-print'):
                 self.print = True
 
-        pass
-
     def start(self, text):
         self.text = text
         self.pos = 0
         self.line = 0
+        self.count_code = 0
+        self.count_data = 0
         self.length = len(text)
 
         try:
@@ -113,6 +113,7 @@ class Assember:
             output.append(code)
         
         return output
+
 
     # --------------------------------
     #   TRANSLATOR
