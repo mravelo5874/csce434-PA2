@@ -1,0 +1,8 @@
+PUSH 23
+PUSH 5
+MPY
+RVALUE var
+ADD
+RVALUE weeee
+LVALUE dajkw
+HALT

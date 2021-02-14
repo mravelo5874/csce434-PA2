@@ -14,11 +14,15 @@ import Assembler
 # Resources used:
 
 if __name__ == '__main__':
+        
+    assember_opts = []
 
     # command line arguments
     if ('-help' in sys.argv):
         print ('\twrite help stuff here...')
         sys.exit()
+    if ('-print' in sys.argv):
+        assember_opts.append('-print')
 
     while (True):
         # prompt user for input file name
@@ -39,6 +43,6 @@ if __name__ == '__main__':
     with open (input_file, 'r') as open_file:
         lines = open_file.readlines()
     
-        assembler = Assembler.MyAssember()
+        assembler = Assembler.MyAssember(assember_opts)
         assembler.start(lines)
     

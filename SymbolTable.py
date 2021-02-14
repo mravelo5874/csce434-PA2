@@ -66,5 +66,33 @@ class SymbolTable():
     def find_symbol_address(self, address):
         return 0
 
+    # prints out the table
+    def print_table(self):
+        
+        print ('[SYMBOL TABLE]')
+        print ('lexeme:\t\ttype:\t\taddress:')
+        for entry in self.list:
+            # print lexeme
+            print (' %s' % entry.lexeme, end='')
+            spaces = 15 - len(entry.lexeme)
+            for _ in range(spaces):
+                print (' ', end='')
+            
+            # print type
+            print (' %s' % entry.symbol_type, end='')
+            spaces = 15 - len(entry.symbol_type)
+            for _ in range(spaces):
+                print (' ', end='')
+
+            # print address
+            print (' %s' % entry.address, end='')
+            spaces = 15 - len(str(entry.address))
+            for _ in range(spaces):
+                print (' ', end='')
+            
+            print ('\n')
+            
+
+
     
 
