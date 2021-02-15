@@ -24,38 +24,6 @@ valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 # --------------------------------
 #   NUMERIC OPCODES
 # --------------------------------
-    #   HALT    0
-    #   PUSH    1
-    #   RVALUE  2
-    #   LVALUE  3
-    #   POP     4
-    #   STO     5
-    #   COPY    6
-    #   ADD     7
-    #   SUB     8
-    #   MPY     9
-        
-    #   DIV     10
-    #   MOD     11
-    #   NEG     12
-    #   NOT     13
-    #   OR      14
-    #   AND     15
-    #   EQ      16
-    #   NE      17
-    #   GT      18
-    #   GE      19
-
-    #   LT      20
-    #   LE      21
-    #   LABEL   22
-    #   GOTO    23
-    #   GOFALSE 24
-    #   GOTRUE  25
-    #   PRINT   26
-    #   READ    27
-    #   GOSUB   28
-    #   RET     29
 
 opcodes = {
     'HALT':    0,
@@ -90,20 +58,36 @@ opcodes = {
     'RET':     29
 }
 
+# instructions that precede int symbols
+pre_int = {
+    'PUSH',
+    'RVALUE',
+    'LVALUE'
+}
+
+# instructions that precede code symbols
+pre_code = {
+    'LABEL',
+    'GOTO',
+    'GOFALSE',
+    'GOTRUE',
+    'GOSUB'
+}
 
 # --------------------------------
 #   ASSEMBLER ERROR
 # --------------------------------
 
 class AssemberError(Exception):
-    def __init__(self, pos, line, err, msg):
+    def __init__(self, pos, line, pss, err, msg):
         self.pos = pos
         self.line = line
         self.err = err
         self.msg = msg
+        self.pss = pss
 
     def __str__(self):
-        return 'AssemberError[%s]: %s at line: %i pos: %i' % (self.err, self.msg, self.line, self.pos)
+        return 'AssemberError[%s]: %s at line: %i pos: %i pass: %i' % (self.err, self.msg, self.line, self.pos, self.pss)
 
 # --------------------------------
 #   ASSEMBLER
@@ -130,41 +114,108 @@ class MyAssember:
             self.text += element
         self.pos = 0
         self.line = 1
+        self.pss = 0
         self.location_counter = 0
         self.length = len(self.text)
+        self.prev_word = ''
         self.table = SymbolTable.SymbolTable()
 
         try:
             self.first_pass()
-        except AssemberError as Error:
-            print(Error)
+            self.second_pass()
+        except AssemberError as AError:
+            print (AError)
+        except SymbolTable.SymbolError as SError:
+            print (SError, end='')
+            print (' at line: %i pos: %i pass: %i' % (self.line, self.pos, self.pss))
 
     # --------------------------------
-    #   FIRST PASS
+    #   PASS METHODS
     # --------------------------------
 
     def first_pass(self):
+        self.pss = 1
+        self.print_msg('[starting pass 1]')
 
-        while (self.pos < self.length):
-            # ge next word in text
+        word = 'start'
+
+        while (self.pos <= self.length and word != 'HALT'):
+            # get next word in text
             word = self.get_next_word()
             self.print_msg('word found: %s' % word)
 
             # add to symbol table if word is a lexeme
             if (word not in opcodes and not self.is_num(word)):
-                self.table.add_symbol(word, 'UNDEF', self.location_counter)
+                symbol_type = self.symbol_type(word)
+                self.table.add_symbol(word, symbol_type, self.location_counter)
                 self.location_counter += 1
+
+            self.prev_word = word
 
         self.table.print_table()
 
+    def second_pass(self):
+        self.pss = 2
+        self.pos = 0
+        self.line = 1
+        self.print_msg('[starting pass 2]')
+
+        code_list = []
+        word = 'start'
+
+        while (self.pos <= self.length and word != 'HALT'):
+            # get next word in text
+            word = self.get_next_word()
+
+            # get second word if needed
+            if (word in pre_int or word in pre_code):
+                next_word = self.get_next_word()
+                comp_line = '\'' + word + ' ' + next_word + '\''
+            else:
+                comp_line = '\'' + word + '\''
+            
+            # translate to machine code
+            code = self.translate(word, next_word)
+            code_list.append(code)
+            self.print_msg('%s : %s' % (code, comp_line))
+
 
     # --------------------------------
-    #   TRANSLATOR
+    #   TRANSLATOR METHODS
     # --------------------------------
 
-    def translate(self, word):
-        return 'None'
+    def translate(self, opcode, operand=''):
 
+        # bits 32-21 are zeros
+        part1 = '000000000000'
+
+        # bits 20-16 are op code
+        part2 = self.opcode_bits(opcode)
+
+        # bits 15-0 are operand (or zeros)
+        if (operand != ''):
+            part3 = self.operand_bits(operand)
+        else:
+            part3 = '0000000000000000'
+        
+        res = part1 + ' ' + part2  + ' ' + part3
+
+        return res
+
+    def opcode_bits(self, opcode):
+        #print ('opcode: ', opcode)
+        num = opcodes.get(opcode)
+        #print ('num: ', num)
+        bits = format(num, '05b')
+        return bits
+
+
+    def operand_bits(self, operand):
+        print ('operand: ', operand)
+        num = self.table.get_address(operand)
+        print ('num: ', num)
+        bits = format(num, '016b')
+        return bits
 
     # --------------------------------
     #   HELPER METHODS
@@ -194,7 +245,7 @@ class MyAssember:
         # determine if word is vaild
         for char in word_found:
             if (char not in valid_chars):
-                raise AssemberError(self.pos, self.line, 'INVALID WORD', 'invalid char found \'%s\'' % char)
+                raise AssemberError(self.pos, self.line, self.pss, 'INVALID WORD', 'invalid char found \'%s\'' % char)
 
         self.pos = temp_pos
         return word_found
@@ -211,3 +262,12 @@ class MyAssember:
         if (not self.print):
             return
         print ('line: %i\tpos: %i\t\t%s' % (self.line, self.pos, msg))
+
+    # determine symbol type
+    def symbol_type(self, symbol):
+        if (self.prev_word in pre_int):
+            return 'INT'
+        elif (self.prev_word in pre_code):
+            return 'CODE'
+        else:
+            raise AssemberError(self.pos, self.line, self.pss, 'INVALID SYMBOL', 'could not determine symbol type of \'%s\'' % symbol)

@@ -3,6 +3,7 @@ PUSH 5
 MPY
 RVALUE var
 ADD
-RVALUE weeee
-LVALUE dajkw
+RVALUE value1
+LVALUE value2
+LABEL the_label
 HALT

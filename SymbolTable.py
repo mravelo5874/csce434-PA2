@@ -10,9 +10,19 @@ from enum import Enum
 # --------------------------------
 
 # Resources used:
+#   NONE
 
 # --------------------------------
-#   SYMBOL ERROR
+#   CHAR LIST
+# --------------------------------
+whitespace = ' \n\t\r\v\f'
+alpha_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+alphaNums_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+nums_chars = '01234567890'
+valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+
+# --------------------------------
+#   SYMBOL STUFF
 # --------------------------------
 
 class SymbolError(Exception):
@@ -32,6 +42,10 @@ class TableEntry():
         self.symbol_type = symbol_type
         self.address = address
 
+# --------------------------------
+#   SYMBOL TABLE
+# --------------------------------
+
 class SymbolTable():
 
     def __init__(self):
@@ -41,7 +55,7 @@ class SymbolTable():
     def add_symbol(self, lexeme, symbol_type, address):
         # check to see if symbol already exists
         if (self.symbol_exists(lexeme)):
-            raise SymbolError('symbol \'%s\' already exists in table (duplicate entry)')
+            raise SymbolError('symbol \'%s\' already exists in table (duplicate entry)' % lexeme)
             
         # add to list
         self.list.append(TableEntry(lexeme, symbol_type, address))
@@ -53,18 +67,24 @@ class SymbolTable():
                 return True
         return False
 
-    # returns table entry if it exists in the table
-    def find_symbol_lexeme(self, lexeme):
-        if (not self.symbol_exists(lexeme)):
-            raise SymbolError('symbol \'%s\' not found in symbol table')
+    def get_address(self, lexeme):
+        # check if lexeme is a number
+        is_num = True
+        for char in lexeme:
+            if (char not in nums_chars):
+                is_num = False
+                break
+        
+       # return int if true
+        if (is_num):
+            return int(lexeme)
 
+        # find lexeme address in table
         for entry in self.list:
-            if (lexeme == entry.lexeme):
-                return entry
-        return None
-
-    def find_symbol_address(self, address):
-        return 0
+            if (entry.lexeme == lexeme):
+                return entry.address
+        
+        raise SymbolError('symbol \'%s\' not found in table')
 
     # prints out the table
     def print_table(self):
@@ -90,7 +110,7 @@ class SymbolTable():
             for _ in range(spaces):
                 print (' ', end='')
             
-            print ('\n')
+            print ('')
             
 
 
