@@ -19,7 +19,7 @@ whitespace = ' \n\t\r\v\f'
 alpha_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 alphaNums_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 nums_chars = '01234567890'
-valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.:'
 
 # --------------------------------
 #   NUMERIC OPCODES
@@ -114,15 +114,14 @@ class MyAssember:
             self.text += element
         self.pos = 0
         self.line = 1
-        self.pss = 0
+        self.pss = 1
         self.location_counter = 0
         self.length = len(self.text)
         self.prev_word = ''
         self.table = SymbolTable.SymbolTable()
 
         try:
-            self.first_pass()
-            self.second_pass()
+            return self.main_loop()
         except AssemberError as AError:
             print (AError)
         except SymbolTable.SymbolError as SError:
@@ -130,55 +129,105 @@ class MyAssember:
             print (' at line: %i pos: %i pass: %i' % (self.line, self.pos, self.pss))
 
     # --------------------------------
-    #   PASS METHODS
+    #   MAIN LOOP
     # --------------------------------
 
-    def first_pass(self):
-        self.pss = 1
-        self.print_msg('[starting pass 1]')
+    def main_loop(self):
+        self.print_msg('[starting main loop]')
+        first_word = self.get_next_word()
+        self.print_msg('word found: %s' % first_word)
 
-        word = 'start'
+        # check to see if word is 'Section'
+        if (first_word == 'Section'):
+            section_type = self.get_next_word()
+            self.print_msg('word found: %s' % section_type)
 
-        while (self.pos <= self.length and word != 'HALT'):
-            # get next word in text
-            word = self.get_next_word()
-            self.print_msg('word found: %s' % word)
+            # data section
+            if (section_type == '.data'):
+                word = ''
+                while (self.pos <= self.length):
+                    # get next word in text
+                    word = self.get_next_word()
+                    self.print_msg('word found: %s' % word)
 
-            # add to symbol table if word is a lexeme
-            if (word not in opcodes and not self.is_num(word)):
-                symbol_type = self.symbol_type(word)
-                self.table.add_symbol(word, symbol_type, self.location_counter)
-                self.location_counter += 1
+                    # break from loop if word is 'Section'
+                    if (word == 'Section'):
+                        break
 
-            self.prev_word = word
+                    # remove ':' from end of word
+                    word = word.replace(':', '')
 
-        self.table.print_table()
-
-    def second_pass(self):
-        self.pss = 2
-        self.pos = 0
-        self.line = 1
-        self.print_msg('[starting pass 2]')
-
-        code_list = []
-        word = 'start'
-
-        while (self.pos <= self.length and word != 'HALT'):
-            # get next word in text
-            word = self.get_next_word()
-
-            # get second word if needed
-            if (word in pre_int or word in pre_code):
-                next_word = self.get_next_word()
-                comp_line = '\'' + word + ' ' + next_word + '\''
-            else:
-                comp_line = '\'' + word + '\''
+                    # add to symbol table if valid
+                    if (word not in opcodes and not self.is_num(word)):
+                        next_word = self.get_next_word()
+                        self.print_msg('word found: %s' % next_word)
+                        if (next_word == 'word'):
+                            self.table.add_symbol(word, 'INT', self.location_counter)
+                            self.location_counter += 1
+                        else:
+                            raise AssemberError(self.pos, self.line, self.pss, 'SYMBOL TYPE', 'could not determine type of \'%s: %s' % (word, next_word))
+                    else:
+                        AssemberError(self.pos, self.line, self.pss, 'INVALID SYMBOL', 'invalid symbol \'%s\'' % word)
             
-            # translate to machine code
-            code = self.translate(word, next_word)
-            code_list.append(code)
-            self.print_msg('%s : %s' % (code, comp_line))
+            section_type = self.get_next_word()
+            self.print_msg('word found: %s' % section_type)
 
+            code_pos = self.pos
+            code_line = self.line
+
+            # code section 1st pass
+            if (section_type == '.code'):
+                word = ''
+
+                while (self.pos <= self.length and word != 'HALT'):
+                    # get next word in text
+                    word = self.get_next_word()
+                    self.print_msg('word found: %s' % word)
+
+                    if (word not in opcodes and not self.is_num(word)):
+                        symbol_type = self.symbol_type(word)
+                        # if symbol is INT, check to see if it exists in the symbol table
+                        if (symbol_type == 'INT'):
+                            if (not self.table.symbol_exists(word)):
+                                raise AssemberError(self.pos, self.line, self.pss, 'UNDEFINED SYMBOL', 'found symbol \'%s\' not present in symbol table' % word)
+                        elif (symbol_type == 'CODE'):
+                            self.table.add_symbol(word, symbol_type, self.location_counter)
+                            self.location_counter += 1
+
+                    self.prev_word = word
+
+            # print symbol table
+            self.table.print_table()
+
+            # code section 2nd pass
+            self.pos = code_pos
+            self.line = code_line
+            self.pss = 2
+            code_list = []
+            word = ''
+
+            while (self.pos <= self.length and word != 'HALT'):
+                # get next word in text
+                word = self.get_next_word()
+                self.print_msg('word found: %s' % word)
+
+                # get second word if needed
+                if (word in pre_int or word in pre_code):
+                    next_word = self.get_next_word()
+                    self.print_msg('word found: %s' % next_word)
+                    comp_line = '\'' + word + ' ' + next_word + '\''
+                else:
+                    comp_line = '\'' + word + '\''
+                
+                # translate to machine code
+                code = self.translate(word, next_word)
+                code_list.append(self.bitstring_to_bytes(code))
+                self.print_msg('%s : %s' % (code, comp_line))
+
+            return code_list
+
+        else:
+            raise AssemberError(self.pos, self.length, self.pss, 'NO SECTION', 'no section found')
 
     # --------------------------------
     #   TRANSLATOR METHODS
@@ -198,7 +247,7 @@ class MyAssember:
         else:
             part3 = '0000000000000000'
         
-        res = part1 + ' ' + part2  + ' ' + part3
+        res = part1 + '' + part2  + '' + part3
 
         return res
 
@@ -261,7 +310,7 @@ class MyAssember:
     def print_msg(self, msg):
         if (not self.print):
             return
-        print ('line: %i\tpos: %i\t\t%s' % (self.line, self.pos, msg))
+        print ('line: %i pos: %i -> %s' % (self.line, self.pos, msg))
 
     # determine symbol type
     def symbol_type(self, symbol):
@@ -271,3 +320,7 @@ class MyAssember:
             return 'CODE'
         else:
             raise AssemberError(self.pos, self.line, self.pss, 'INVALID SYMBOL', 'could not determine symbol type of \'%s\'' % symbol)
+    
+    # convert bit string to bytes
+    def bitstring_to_bytes(self, str):
+        return int(str, 2).to_bytes((len(str) + 7) // 8, byteorder='big')

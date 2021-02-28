@@ -43,6 +43,10 @@ if __name__ == '__main__':
     with open (input_file, 'r') as open_file:
         lines = open_file.readlines()
     
-        assembler = Assembler.MyAssember(assember_opts)
-        assembler.start(lines)
-    
+    assembler = Assembler.MyAssember(assember_opts)
+    code = assembler.start(lines)
+
+    # open output file and write code to it
+    with open ('a.bin', 'wb+') as output_file:
+        for line in code:
+            output_file.write(line)
