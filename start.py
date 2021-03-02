@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # command line arguments
     if ('-help' in sys.argv):
-        print ('\tThis program translates a hypothetical stack into machine code.\n\n\tCommand:\n\t>python start.py [file name] [optional: -print])\n\n\tAfter translation, the machine code is written to \'a.bin\'.')
+        print ('\tThis program translates a hypothetical stack into machine code.\n\n\tCommand:\n\t>python start.py [file name] [options: -print -hex -help])\n\n\tAfter translation, the machine code is written to \'a.bin\'.')
         sys.exit()
     if ('-print' in sys.argv):
         assember_opts.append('-print')
@@ -50,11 +50,12 @@ if __name__ == '__main__':
     assembler = Assembler.MyAssember(assember_opts)
     code = assembler.start(lines)
 
-    # open output file and write code to it
-    count = 0
-    with open ('a.bin', 'wb+') as output_file:
-        for line in code:
-            if (print_hex):
-                print ('%i %s' %(count, line))
-            count += 1
-            output_file.write(line)
+    if (code != None):
+        # open output file and write code to it
+        count = 0
+        with open ('a.bin', 'wb+') as output_file:
+            for line in code:
+                if (print_hex):
+                    print ('%i %s' %(count, line))
+                count += 1
+                output_file.write(line)

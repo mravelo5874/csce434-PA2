@@ -19,7 +19,7 @@ whitespace = ' \n\t\r\v\f'
 alpha_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 alphaNums_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 nums_chars = '01234567890'
-valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.:'
+valid_chars = '01234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.:-'
 
 # --------------------------------
 #   NUMERIC OPCODES
@@ -119,6 +119,8 @@ class MyAssember:
         self.length = len(self.text)
         self.prev_word = ''
         self.table = SymbolTable.SymbolTable()
+        self.code_pos = 0
+        self.code_line = 0
 
         try:
             return self.main_loop()
@@ -168,44 +170,30 @@ class MyAssember:
                             raise AssemberError(self.pos, self.line, self.pss, 'SYMBOL TYPE', 'could not determine type of \'%s: %s' % (word, next_word))
                     else:
                         AssemberError(self.pos, self.line, self.pss, 'INVALID SYMBOL', 'invalid symbol \'%s\'' % word)
-            
-            section_type = self.get_next_word()
-            self.print_msg('word found: %s' % section_type)
-
-            code_pos = self.pos
-            code_line = self.line
+                
+                word1 = self.get_next_word()
+                if (word1 == '.code'):
+                    self.code_pass_one()
+                else:
+                    raise AssemberError(self.pos, self.length, self.pss, 'INVALID SECTION', 'invalid section \'%s\'' % word1)
 
             # code section 1st pass
-            if (section_type == '.code'):
-                word = ''
-
-                while (self.pos <= self.length and word != 'HALT'):
-                    # get next word in text
-                    word = self.get_next_word()
-                    self.print_msg('word found: %s' % word)
-
-                    if (word not in opcodes and not self.is_num(word)):
-                        symbol_type = self.symbol_type(word)
-                        # if symbol is INT, check to see if it exists in the symbol table
-                        if (symbol_type == 'INT'):
-                            if (not self.table.symbol_exists(word)):
-                                raise AssemberError(self.pos, self.line, self.pss, 'UNDEFINED SYMBOL', 'found symbol \'%s\' not present in symbol table' % word)
-                        elif (symbol_type == 'CODE'):
-                            self.table.add_symbol(word, symbol_type, self.location_counter)
-                            self.location_counter += 1
-
-                    self.prev_word = word
+            elif (section_type == '.code'):
+                self.code_pass_one()
+            else:
+                raise AssemberError(self.pos, self.length, self.pss, 'INVALID SECTION', 'invalid section \'%s\'' % section_type)
 
             # print symbol table
             if (self.print):
                 self.table.print_table()
 
             # code section 2nd pass
-            self.pos = code_pos
-            self.line = code_line
+            self.pos = self.code_pos
+            self.line = self.code_line
             self.pss = 2
             code_list = []
             word = ''
+            next_word = ''
 
             count = 0
 
@@ -225,7 +213,7 @@ class MyAssember:
                 # translate to machine code
                 code = self.translate(word, next_word)
                 code_list.append(self.bitstring_to_bytes(code))
-                print('%i %s : %s' % (count, code, comp_line))
+                # print('%i %s : %s' % (count, code, comp_line))
                 next_word = ''
                 count += 1
 
@@ -234,6 +222,28 @@ class MyAssember:
 
         else:
             raise AssemberError(self.pos, self.length, self.pss, 'NO SECTION', 'no section found')
+
+    def code_pass_one(self):
+        word = ''
+        self.code_pos = self.pos
+        self.code_line = self.line
+
+        while (self.pos <= self.length and word != 'HALT'):
+            # get next word in text
+            word = self.get_next_word()
+            self.print_msg('word found: %s' % word)
+
+            if (word not in opcodes and not self.is_num(word)):
+                symbol_type = self.symbol_type(word)
+                # if symbol is INT, check to see if it exists in the symbol table
+                if (symbol_type == 'INT'):
+                    if (not self.table.symbol_exists(word)):
+                        raise AssemberError(self.pos, self.line, self.pss, 'UNDEFINED SYMBOL', 'found symbol \'%s\' not present in symbol table' % word)
+                elif (symbol_type == 'CODE'):
+                    self.table.add_symbol(word, symbol_type, self.location_counter)
+                    self.location_counter += 1
+
+            self.prev_word = word
 
     # --------------------------------
     #   TRANSLATOR METHODS
@@ -269,7 +279,10 @@ class MyAssember:
         #print ('operand: ', operand)
         num = self.table.get_address(operand)
         #print ('num: ', num)
-        bits = format(num, '016b')
+        # deal with negative numbers
+        bits = bin(num & (2**16-1))
+        bits = bits[2:]
+        #print ('bits: ', bits)
         return bits
 
     # --------------------------------
@@ -307,9 +320,13 @@ class MyAssember:
 
     # return true if word is a number, else false
     def is_num(self, word):
+        count = 0
         for char in word:
-            if (char not in nums_chars):
+            if (char == '-' and count == 0):
+                continue
+            elif (char not in nums_chars):
                 return False
+            count += 1
         return True
 
     # prints msg with position and line number

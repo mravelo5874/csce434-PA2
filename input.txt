@@ -1,7 +1,6 @@
-Section .data
-    flag: word
 Section .code
-    LVALUE    flag
-    PUSH      1
-    STO
-    HALT
+PUSH -10
+NEG
+NEG
+PRINT
+HALT

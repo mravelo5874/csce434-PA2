@@ -55,7 +55,7 @@ class SymbolTable():
     def add_symbol(self, lexeme, symbol_type, address):
         # check to see if symbol already exists
         if (self.symbol_exists(lexeme)):
-            raise SymbolError('symbol \'%s\' already exists in table (duplicate entry)' % lexeme)
+            return
             
         # add to list
         self.list.append(TableEntry(lexeme, symbol_type, address))
@@ -70,10 +70,14 @@ class SymbolTable():
     def get_address(self, lexeme):
         # check if lexeme is a number
         is_num = True
+        count = 0
         for char in lexeme:
+            if (char == '-' and count == 0):
+                continue
             if (char not in nums_chars):
                 is_num = False
                 break
+            count += 1
         
        # return int if true
         if (is_num):
@@ -84,7 +88,7 @@ class SymbolTable():
             if (entry.lexeme == lexeme):
                 return entry.address
         
-        raise SymbolError('symbol \'%s\' not found in table')
+        raise SymbolError('symbol \'%s\' not found in table' % lexeme)
 
     # prints out the table
     def print_table(self):
