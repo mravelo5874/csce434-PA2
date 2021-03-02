@@ -197,7 +197,8 @@ class MyAssember:
                     self.prev_word = word
 
             # print symbol table
-            self.table.print_table()
+            if (self.print):
+                self.table.print_table()
 
             # code section 2nd pass
             self.pos = code_pos
@@ -205,6 +206,8 @@ class MyAssember:
             self.pss = 2
             code_list = []
             word = ''
+
+            count = 0
 
             while (self.pos <= self.length and word != 'HALT'):
                 # get next word in text
@@ -222,8 +225,11 @@ class MyAssember:
                 # translate to machine code
                 code = self.translate(word, next_word)
                 code_list.append(self.bitstring_to_bytes(code))
-                self.print_msg('%s : %s' % (code, comp_line))
+                print('%i %s : %s' % (count, code, comp_line))
+                next_word = ''
+                count += 1
 
+            print('[translation complete]')
             return code_list
 
         else:
@@ -236,7 +242,7 @@ class MyAssember:
     def translate(self, opcode, operand=''):
 
         # bits 32-21 are zeros
-        part1 = '000000000000'
+        part1 = '0000'
 
         # bits 20-16 are op code
         part2 = self.opcode_bits(opcode)
@@ -245,7 +251,7 @@ class MyAssember:
         if (operand != ''):
             part3 = self.operand_bits(operand)
         else:
-            part3 = '0000000000000000'
+            part3 = format(0, '016b')
         
         res = part1 + '' + part2  + '' + part3
 
@@ -260,9 +266,9 @@ class MyAssember:
 
 
     def operand_bits(self, operand):
-        print ('operand: ', operand)
+        #print ('operand: ', operand)
         num = self.table.get_address(operand)
-        print ('num: ', num)
+        #print ('num: ', num)
         bits = format(num, '016b')
         return bits
 

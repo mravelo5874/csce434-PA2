@@ -12,17 +12,21 @@ import Assembler
 # --------------------------------
 
 # Resources used:
+#   NONE
 
 if __name__ == '__main__':
         
     assember_opts = []
+    print_hex = False
 
     # command line arguments
     if ('-help' in sys.argv):
-        print ('\twrite help stuff here...')
+        print ('\tThis program translates a hypothetical stack into machine code.\n\n\tCommand:\n\t>python start.py [file name] [optional: -print])\n\n\tAfter translation, the machine code is written to \'a.bin\'.')
         sys.exit()
     if ('-print' in sys.argv):
         assember_opts.append('-print')
+    if ('-hex' in sys.argv):
+        print_hex = True
 
     while (True):
         # prompt user for input file name
@@ -37,7 +41,7 @@ if __name__ == '__main__':
         else:
             print ('ImportError: could not find file', input_file)
 
-    print ('Found file', input_file)
+    print ('[Found file %s]' % input_file)
 
     # open file and read all lines (removing any '\n' chars)
     with open (input_file, 'r') as open_file:
@@ -47,6 +51,10 @@ if __name__ == '__main__':
     code = assembler.start(lines)
 
     # open output file and write code to it
+    count = 0
     with open ('a.bin', 'wb+') as output_file:
         for line in code:
+            if (print_hex):
+                print ('%i %s' %(count, line))
+            count += 1
             output_file.write(line)
